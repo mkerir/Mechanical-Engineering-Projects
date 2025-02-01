@@ -1,0 +1,142 @@
+/* ULTRASONIC PROXIMITY RADAR */
+
+/* This project serves as a proximity sensor, it contains an ultrasonic proximity sensor mounted on a rotating servo motor.
+   The servo motor rotates over 180 degrees, the sensor rotating as well is constantly scanning the range for objects in it's proximity.
+   The data collected is then displayed on an LCD screen, distance and angle of rotation at all times.
+   When the ultasonic sensor detects an object closer than 10cm, it emits both visual and auditory signals through an LED and a buzzer. */
+
+
+/*The <LiquidCrystal.h> library allows the microcontroller to communicate with the LCD through simple functions such as blink(),clear(),write(),print()..*/
+/*The <Servo.h> library contains the command methods to control the servo motor through input type angles of rotation*/
+#include <LiquidCrystal.h>
+#include <Servo.h>
+
+/* Let's define the constants for LCD monitor pins*/
+const int d4 = 7;
+const int d5 = 6;
+const int d6 = 5;
+const int d7 = 4;
+const int rs = 12;  
+const int en = 11;
+
+/* Let's define the constants for ultrasonic sensor pins*/
+const int trigPin = 2;
+const int echoPin = 3;
+
+/* And finally the constants for the LED and buzzer pins */
+const int redLedPin = 13;
+const int greenLedPin = 8;
+const int buzzerPin = 9;
+
+/* We need two objects for our program, one for display and one for the motor*/
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+Servo myServo;
+
+/* In the setup, we'll configure some constants related to the hardware, let's start by setting our serial baud rate*/
+void setup() {
+  Serial.begin(115200);
+
+/* We need to setup the servo object to the pin we chose upon installation, through the Servo object*/
+  myServo.attach(10);
+
+/* We need to configure our LCD display, containing 16 rows and 2 colomns, through the LCD object*/
+  lcd.begin(16, 2);
+
+/* We need to set the ultrasonic sensor pins, trigger for the sound pulse (output), and echo for reception (input)*/
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+/* The LEDs and buzzer are both signal-out type hardware, pin setup to output*/
+  pinMode(redLedPin, OUTPUT);
+  pinMode(greenLedPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+}
+/* Im aware Dr. Gordon recommended using regular loops, but i prefer using the loop function, since it contains much of the repetition, we'll be using for loops within though*/
+void loop() {
+  
+  int distance;
+  
+/*The servo rotation will be split into two segments, a phase from 0 to 180 degrees, we'll put a delay of 15ms to allow it time to execute it's movement*/
+  for (int angle = 0; angle <= 180; angle++) {
+    myServo.write(angle);
+    delay(15);
+
+/* The microcontroller will read in the instantanous distance from the ultrasonic sensor echo pin through our function*/
+    distance = getDistance();
+
+/* And once read, it will we refresh the LCD and display the angle of rotation and the distance*/
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Angle: ");
+    lcd.print(angle);
+    lcd.print(" deg");
+    lcd.setCursor(0, 1);
+    lcd.print("Distance: ");
+    lcd.print(distance);
+    lcd.print(" cm");
+
+/* The LEDs and buzzer are triggered based on the distance, if the variable is > 10 then green_LED stays lit, otherwise red_LED and buzzer are triggered*/
+    if (distance < 10) {
+      digitalWrite(redLedPin, HIGH);
+      digitalWrite(buzzerPin, HIGH);
+      digitalWrite(greenLedPin, LOW);
+      delay(15);
+    } else {
+      digitalWrite(redLedPin, LOW);
+      digitalWrite(buzzerPin, LOW);
+      digitalWrite(greenLedPin, HIGH);
+      delay(15);
+    }
+  }
+
+/* This loop contains the second phase of the servo rotation from 180 to 0 degrees*/
+  for (int angle = 180; angle >= 0; angle--) {
+    myServo.write(angle);
+    delay(15);
+
+    distance = getDistance();
+
+/* Display angle and distance on the LCD*/
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Angle: ");
+    lcd.print(angle);
+    lcd.print(" deg");
+    lcd.setCursor(0, 1);
+    lcd.print("Distance: ");
+    lcd.print(distance);
+    lcd.print(" cm");
+
+/* The LED/BUZZER pin triggers based on distance*/
+    if (distance < 10) {
+      digitalWrite(redLedPin, HIGH);
+      digitalWrite(buzzerPin, HIGH);
+      digitalWrite(greenLedPin, LOW);
+      delay(15);
+    } else {
+      digitalWrite(redLedPin, LOW);
+      digitalWrite(buzzerPin, LOW);
+      digitalWrite(greenLedPin, HIGH);
+      delay(15);
+    }
+  }
+}
+
+/* We'll be using an int return type function to trigger our sensor and compute the input data into distance in centimeters (dictance= duration x speed of sound / 2)*/
+/* I've used quite big of a delay since the hardware is not very accurate, causing occasional fluctuations, i believe the range of the delay gives a good trigger average*/
+int getDistance() {
+    digitalWrite(trigPin, LOW);
+    delay(150);
+    digitalWrite(trigPin, HIGH);
+    delay(150);
+    digitalWrite(trigPin, LOW);
+    int duration = pulseIn(echoPin, HIGH);
+    int distance = duration * 0.034 / 2;
+
+/* I mostly used the serial.print function to verify the outputs before setting up the LCD, i'll leave it for debugging purposes, although it has no effect on the program*/ 
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" cm");
+
+    return distance;
+  }
